@@ -1,0 +1,9 @@
+redis:
+  host: 192.168.203.33
+  port: 7005
+  password: "Namitech#$@342-redis"
+  db: 0
+
+push:
+  interval: 5s
+  count: 10000
