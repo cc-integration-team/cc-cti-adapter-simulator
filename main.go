@@ -11,25 +11,27 @@ import (
 	"time"
 
 	pkgredis "github.com/cc-integration-team/cc-pkg/pkg/redis"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
-type CTIEvent struct {
-	Topic string       `json:"topic"`
-	Body  CTIEventBody `json:"body"`
+type Event struct {
+	EventName string  `json:"eventName"`
+	EventID   string  `json:"eventID"`
+	CTITag    string  `json:"ctiTag"`
+	Details   Details `json:"details"`
 }
 
-type CTIEventBody struct {
-	EventName     string            `json:"eventName"`
-	CallID        string            `json:"callID"`
-	Extension     string            `json:"extension"`
-	AgentID       string            `json:"agentID"`
-	AgentLogin    string            `json:"agentLogin"`
-	CustomerPhone string            `json:"customerPhone"`
-	Direction     string            `json:"direction"`
-	CallerID      string            `json:"callerID"`
-	CalleeID      string            `json:"calleeID"`
-	Metadata      map[string]string `json:"metadata"`
+type Details struct {
+	CTICallID string `json:"cticallid"`
+	Ext       string `json:"ext"`
+	Customer  string `json:"customer"`
+	AgentID   string `json:"agentID"`
+	CallerID  string `json:"callerid"`
+	CalleeID  string `json:"calleeid"`
+	Direction string `json:"direction"`
+	QueueName string `json:"queueName"`
+	Language  string `json:"language"`
 }
 
 var (
@@ -101,27 +103,25 @@ func pushEvents(redisClient *redis.Client, count int) {
 		serial := fmt.Sprintf("%0*d", serialLen, i)
 		phone := prefix + serial
 
-		event := CTIEvent{
-			Topic: "agent",
-			Body: CTIEventBody{
-				EventName:     "connected",
-				CallID:        fmt.Sprintf("call-%d", i),
-				Extension:     fmt.Sprintf("10%02d", i%10),
-				AgentID:       fmt.Sprintf("agent-%d", i),
-				AgentLogin:    fmt.Sprintf("login-%d", i),
-				CustomerPhone: phone,
-				Direction:     "Callin",
-				CallerID:      fmt.Sprintf("caller-%d", i),
-				CalleeID:      fmt.Sprintf("callee-%d", i),
-				Metadata: map[string]string{
-					"system": "auto-sender",
-					"time":   time.Now().Format(time.RFC3339),
-				},
+		event := Event{
+			EventName: "connected",
+			EventID:   uuid.New().String(),
+			CTITag:    "CISCO_JTAPI",
+			Details: Details{
+				CTICallID: fmt.Sprintf("cticallid-%d", i),
+				Ext:       fmt.Sprintf("10%02d", i%10),
+				AgentID:   fmt.Sprintf("agent-%d", i),
+				Customer:  phone,
+				Direction: "Callin",
+				CallerID:  fmt.Sprintf("caller-%d", i),
+				CalleeID:  fmt.Sprintf("callee-%d", i),
+				QueueName: fmt.Sprintf("queue-%d", i%5),
+				Language:  "vi",
 			},
 		}
 
 		wg.Add(1)
-		go func(ev CTIEvent) {
+		go func(ev Event) {
 			defer wg.Done()
 			payload, err := json.Marshal(ev)
 			if err != nil {

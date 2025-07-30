@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/cc-integration-team/cc-pkg v1.5.2
+	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.9.0
 	github.com/spf13/viper v1.20.1
 )

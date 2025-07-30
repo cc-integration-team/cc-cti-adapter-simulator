@@ -5,5 +5,5 @@ redis:
   db: 0
 
 push:
-  interval: 3s
-  count: 10000
+  interval: 5s
+  count: 1000
