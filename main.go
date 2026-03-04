@@ -125,7 +125,7 @@ func pushEvents(redisClient *redis.Client, eventName string) {
 				AgentLogin:    fmt.Sprintf("login-%d", i),
 				CustomerPhone: phone,
 				Direction:     "Callin",
-				CallerID:      fmt.Sprintf("caller-%d", i),
+				CallerID:      phone,
 				CalleeID:      fmt.Sprintf("callee-%d", i),
 				Metadata: map[string]string{
 					"system": "auto-sender",
