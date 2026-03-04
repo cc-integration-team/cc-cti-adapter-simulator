@@ -13,8 +13,10 @@ type Config struct {
 }
 
 type PushConfig struct {
-	Interval time.Duration `mapstructure:"interval"`
-	Count    int           `mapstructure:"count"`
+	Interval            time.Duration `mapstructure:"interval"`
+	Count               int           `mapstructure:"count"`
+	ConnectedInterval   time.Duration `mapstructure:"connectedInterval"`
+	TerminatedInterval  time.Duration `mapstructure:"terminatedInterval"`
 }
 
 func LoadConfig(path string) (*Config, error) {

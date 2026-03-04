@@ -7,3 +7,5 @@ redis:
 push:
   interval: 5s
   count: 10000
+  connectedInterval: 5s
+  terminatedInterval: 60s

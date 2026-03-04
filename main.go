@@ -32,9 +32,10 @@ type CTIEventBody struct {
 }
 
 var (
-	isRunning bool
-	ticker    *time.Ticker
-	stopChan  chan struct{}
+	isRunning         bool
+	connectedTicker   *time.Ticker
+	terminatedTicker  *time.Ticker
+	stopChan          chan struct{}
 )
 
 func main() {
@@ -55,30 +56,51 @@ func main() {
 		if isRunning {
 			log.Println("🛑 Trigger already running, stopping now...")
 			stopChan <- struct{}{}
+			stopChan <- struct{}{}
 			isRunning = false
 			w.Write([]byte("Stopped pushing events"))
 			return
 		}
 
 		isRunning = true
-		log.Println("▶️ Starting to push events every", config.Push.Interval)
-		ticker = time.NewTicker(config.Push.Interval)
+		log.Println("▶️ Starting to push events")
+		log.Printf("   Connected events every: %v", config.Push.ConnectedInterval)
+		log.Printf("   Terminated events every: %v", config.Push.TerminatedInterval)
 
+		connectedTicker = time.NewTicker(config.Push.ConnectedInterval)
+		terminatedTicker = time.NewTicker(config.Push.TerminatedInterval)
+
+		// Goroutine for connected events
 		go func() {
 			for {
 				select {
-				case <-ticker.C:
-					log.Println("🚀 Pushing phone range 0000001000 -> 0000009999 ...")
-					pushEvents(redisClient)
+				case <-connectedTicker.C:
+					log.Println("🚀 Pushing CONNECTED events (phone range 0000001000 -> 0000009999)...")
+					pushEvents(redisClient, "connected")
 				case <-stopChan:
-					log.Println("🛑 Received stop signal")
-					ticker.Stop()
+					log.Println("🛑 Received stop signal for connected events")
+					connectedTicker.Stop()
 					return
 				}
 			}
 		}()
 
-		w.Write([]byte("Started looping phone 0000001000 -> 0000009999"))
+		// Goroutine for terminated events
+		go func() {
+			for {
+				select {
+				case <-terminatedTicker.C:
+					log.Println("🔚 Pushing TERMINATED events (phone range 0000001000 -> 0000009999)...")
+					pushEvents(redisClient, "terminated")
+				case <-stopChan:
+					log.Println("🛑 Received stop signal for terminated events")
+					terminatedTicker.Stop()
+					return
+				}
+			}
+		}()
+
+		w.Write([]byte("Started pushing connected and terminated events"))
 	})
 
 	log.Println("✅ Listening on :8080")
@@ -87,7 +109,7 @@ func main() {
 	}
 }
 
-func pushEvents(redisClient *redis.Client) {
+func pushEvents(redisClient *redis.Client, eventName string) {
 	var wg sync.WaitGroup
 
 	for i := 1000; i <= 1999; i++ {
@@ -96,7 +118,7 @@ func pushEvents(redisClient *redis.Client) {
 		event := CTIEvent{
 			Topic: "agent",
 			Body: CTIEventBody{
-				EventName:     "connected",
+				EventName:     eventName,
 				CallID:        fmt.Sprintf("call-%d", i),
 				Extension:     fmt.Sprintf("10%02d", i%10),
 				AgentID:       fmt.Sprintf("agent-%d", i),
@@ -129,5 +151,5 @@ func pushEvents(redisClient *redis.Client) {
 	}
 
 	wg.Wait()
-	log.Println("✅ Done pushing phones 0000001000 -> 0000009999")
+	log.Printf("✅ Done pushing %s events (phones 0000001000 -> 0000009999)", eventName)
 }
